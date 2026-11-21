@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="es-DO">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#ff5a1f">
+<title>Mis Facturas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: calm, large, kind — a tool a mother uses once a month without help.
+   IDEA: a paper bill spike / receipt drawer, turned into a priority queue.
+   PICTURE: the to-pay list itself, cards with the invoice photo and a payment bar.
+   COLOUR and TYPE: aluminium ground, black ink, one orange pointer; Geist.
+   LAYOUT: brand + big "still to pay" readout, tabs, one column of cards, round add button. */
+:root{color-scheme:light dark;
+--bg:light-dark(#eceded,#141517);--card:light-dark(#fff,#1f2023);--ink:light-dark(#111,#f1f1f1);
+--mut:light-dark(#62656b,#a3a6ad);--line:light-dark(#d9dadd,#2e3034);--acc:#ff5a1f;--accInk:#fff;
+--red:light-dark(#d1261b,#ff6b5e);--amb:light-dark(#a86400,#f0b04a);--grn:light-dark(#18794e,#4cc38a);--soft:light-dark(#f5f5f6,#26272b)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 Geist,system-ui,-apple-system,sans-serif;overflow-x:clip}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:720px;margin:0 auto;padding:16px max(4vw,14px) 120px}
+header{display:flex;align-items:center;gap:12px}
+header h1{font-size:26px;line-height:1.05;margin:0;font-weight:700}
+header p{margin:0;color:var(--mut);font-size:14px}
+.readout{margin:18px 0 6px;padding:20px;border-radius:20px;background:var(--ink);color:var(--bg);display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
+.readout .lab{font-size:14px;opacity:.75}
+.readout .big{font-size:clamp(32px,9vw,48px);font-weight:700;line-height:1.05;white-space:nowrap}
+.readout .side{font-size:14px;color:#ff8a5c}.readout .side b{white-space:nowrap}
+.tabs{display:flex;gap:6px;margin:16px 0 12px;background:var(--card);padding:5px;border-radius:14px;border:1px solid var(--line)}
+.tabs button{flex:1;min-height:44px;border:0;border-radius:10px;background:none;font-weight:600;font-size:15px;padding:0 4px;cursor:pointer;color:var(--mut)}
+.mbar{display:flex;align-items:center;gap:6px;margin:0 0 12px}
+.mbar button{min-width:44px;min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);cursor:pointer;font-weight:600;font-size:16px}
+.mbar .mlab{flex:1;text-align:center;font-weight:700;font-size:17px}.mbar .mlab::first-letter{text-transform:uppercase}
+.mbar .all{padding:0 14px}.mbar .all[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.notice{display:flex;align-items:center;justify-content:space-between;gap:10px;background:color-mix(in srgb,var(--acc) 12%,var(--card));border-radius:14px;padding:8px 8px 8px 14px;font-size:14px}
+.notice button{min-height:40px;border:0;border-radius:10px;background:var(--acc);color:var(--accInk);font-weight:600;padding:0 12px;cursor:pointer;white-space:nowrap}
+.ico{width:56px;height:56px;border-radius:28px;display:grid;place-items:center;font-size:26px;font-weight:700}
+.ico.in{background:color-mix(in srgb,var(--grn) 16%,transparent);color:var(--grn)}.ico.out{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
+.amt.in{color:var(--grn)}.amt.out{color:var(--red)}
+.grp{display:flex;justify-content:space-between}.grp b{white-space:nowrap}
+.readout .split{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:14px}.readout .split b{white-space:nowrap}
+.tabs button[aria-selected=true]{background:var(--acc);color:var(--accInk)}
+.list{display:grid;gap:10px}
+.card{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;cursor:pointer;text-align:left;width:100%}
+.card:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.thumb{width:56px;height:56px;border-radius:10px;object-fit:cover;background:var(--soft);display:grid;place-items:center;color:var(--mut);font-size:12px}
+.card h3{margin:0;font-size:17px;font-weight:600;line-height:1.25}
+.card .sub{font-size:13px;color:var(--mut)}
+.card .amt{text-align:right;white-space:nowrap;font-weight:700}
+.card .amt small{display:block;font-weight:500;font-size:13px;color:var(--mut)}
+.bar{grid-column:1/-1;height:6px;border-radius:6px;background:var(--soft);overflow:hidden}.bar i{display:block;height:100%;background:var(--grn)}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:20px;margin-right:6px;white-space:nowrap}
+.p1{background:color-mix(in srgb,var(--red) 16%,transparent);color:var(--red)}
+.p2{background:color-mix(in srgb,var(--amb) 18%,transparent);color:var(--amb)}
+.p3{background:var(--soft);color:var(--mut)}
+.ok{background:color-mix(in srgb,var(--grn) 16%,transparent);color:var(--grn)}
+.part{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc)}
+.grp{font-size:14px;color:var(--mut);margin:14px 4px 2px;font-weight:600;gap:10px}
+.empty{text-align:center;color:var(--mut);padding:40px 10px}
+.fab{position:fixed;right:max(18px,calc(50% - 342px));bottom:22px;height:60px;padding:0 24px;border-radius:30px;border:0;background:var(--acc);color:var(--accInk);font-weight:700;font-size:18px;box-shadow:0 8px 24px rgba(255,90,31,.4);cursor:pointer}
+.shade{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
+.shade.on{display:flex}
+.sheet{background:var(--bg);width:100%;max-width:720px;max-height:92vh;overflow:auto;border-radius:22px 22px 0 0;padding:18px max(4vw,16px) 28px;animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+@media(prefers-reduced-motion:reduce){.sheet{animation:none}}
+.sheet h2{margin:0 0 4px;font-size:24px;line-height:1.1}
+.top{display:flex;justify-content:space-between;align-items:start;gap:10px;margin-bottom:12px}
+.x{width:44px;height:44px;border-radius:22px;border:0;background:var(--card);font-size:22px;cursor:pointer;flex:none}
+label{display:block;font-size:14px;font-weight:600;margin:12px 0 4px}
+input,select,textarea{width:100%;min-height:48px;font-size:16px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card)}
+textarea{min-height:70px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.btn{min-height:50px;padding:0 18px;border-radius:14px;border:0;background:var(--acc);color:var(--accInk);font-weight:700;cursor:pointer;width:100%;margin-top:16px}
+.btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:none;color:var(--red);border:1px solid var(--red)}
+.photo{width:100%;max-height:360px;object-fit:contain;border-radius:14px;background:var(--card);border:1px solid var(--line);cursor:zoom-in}
+.snap{display:flex;align-items:center;justify-content:center;gap:8px;min-height:90px;border:2px dashed var(--line);border-radius:14px;background:var(--card);cursor:pointer;font-weight:600;color:var(--mut);position:relative;overflow:hidden}
+.snap input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.snap img{max-height:160px;border-radius:8px}
+.facts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin:12px 0}
+.facts div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.facts span{display:block;font-size:13px;color:var(--mut)}.facts b{white-space:nowrap}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{min-height:44px;padding:0 14px;border-radius:22px;border:1px solid var(--line);background:var(--card);cursor:pointer;font-weight:600}
+.chips button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.pays{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:6px}
+.pays li{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 6px 6px 12px}
+.pays button{width:40px;height:40px;border:0;background:none;color:var(--mut);font-size:20px;cursor:pointer}
+.note{font-size:13px;color:var(--mut);text-align:center;margin-top:24px}
+.note button{background:none;border:0;color:var(--acc);font-weight:600;cursor:pointer;min-height:44px;font-size:13px}
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:12px;font-size:15px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20;max-width:90vw}
+.toast.on{opacity:1}
+.viewer{position:fixed;inset:0;background:#000;z-index:30;display:none;align-items:center;justify-content:center}
+.viewer.on{display:flex}.viewer img{max-width:100%;max-height:100%}
+.viewer .x{position:absolute;top:14px;right:14px;background:#fff;color:#000}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="13" fill="#ff5a1f"/>
+      <path d="M14 10h20v28l-3.3-2.4-3.4 2.4-3.3-2.4-3.3 2.4-3.4-2.4L14 38z" fill="#fff"/>
+      <path d="M18 17h12M18 22h12M18 27h6" stroke="#ffb393" stroke-width="2.2" stroke-linecap="round"/>
+      <circle cx="33" cy="31" r="8" fill="#111"/>
+      <path d="m29.4 31 2.4 2.4 4.6-4.8" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div><h1>Mis Facturas</h1><p id="month"></p></div>
+  </header>
+
+  <section class="readout" id="readout" aria-live="polite"></section>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="topay" aria-selected="true">Por pagar</button>
+    <button role="tab" data-tab="paid" aria-selected="false">Pagadas</button>
+    <button role="tab" data-tab="prov" aria-selected="false">Suplidores</button>
+    <button role="tab" data-tab="caja" aria-selected="false">Caja</button>
+  </nav>
+
+  <div class="mbar" id="mbar"><button data-act="mprev" aria-label="Mes anterior">‹</button><div class="mlab" id="mlab"></div><button data-act="mnext" aria-label="Mes siguiente">›</button><button class="all" data-act="mall" aria-pressed="false">Todos</button></div>
+  <main id="list" class="list"></main>
+  <p class="note">Demo con datos de ejemplo, guardados solo en este equipo. <button data-act="reset">Reiniciar demo</button></p>
+</div>
+
+<button class="fab" id="fab" data-act="fab">+ Factura</button>
+<div class="shade" id="shade"><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+<div class="viewer" id="viewer"><img id="viewImg" alt="Foto de la factura"><button class="x" data-act="closeview" aria-label="Cerrar">×</button></div>
+<div class="toast" id="toast"></div>
+
+<script>
+{
+const KEY='billbox-demo-es-v1';
+const PR={1:['Urgente','p1'],2:['Normal','p2'],3:['Puede esperar','p3']};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const today=()=>ymd(new Date());
+const fmtDate=s=>s?new Date(s+'T12:00').toLocaleDateString('es-DO',{month:'short',day:'numeric',year:'numeric'}):'—';
+const money=n=>'RD$ '+(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const r2=n=>Math.round(n*100)/100;
+
+function fakePhoto(prov,num,amt,date){
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800"><rect width="600" height="800" fill="#fbfaf6"/><rect x="40" y="40" width="520" height="90" fill="#e9e6dd"/><text x="60" y="98" font-family="Arial" font-size="34" font-weight="bold" fill="#333">${esc(prov)}</text><text x="60" y="190" font-family="Arial" font-size="24" fill="#555">FACTURA ${esc(num)}</text><text x="60" y="226" font-family="Arial" font-size="22" fill="#777">Fecha: ${esc(date)}</text>${[0,1,2,3,4].map(i=>`<rect x="60" y="${290+i*60}" width="${300-i*30}" height="16" fill="#ddd"/><rect x="440" y="${290+i*60}" width="100" height="16" fill="#ddd"/>`).join('')}<line x1="60" y1="620" x2="540" y2="620" stroke="#999" stroke-width="2"/><text x="60" y="680" font-family="Arial" font-size="30" font-weight="bold" fill="#222">TOTAL</text><text x="540" y="680" text-anchor="end" font-family="Arial" font-size="30" font-weight="bold" fill="#222">${esc(money(amt))}</text></svg>`;
+  return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+}
+
+function seed(){
+  const now=new Date(),d=(day,mo=0)=>ymd(new Date(now.getFullYear(),now.getMonth()+mo,Math.min(day,28)));
+  const providers=[
+    {id:'P-001',name:'Compañía de Luz',desc:'La luz de la casa · contrato 44-7182',prio:1},
+    {id:'P-002',name:'Acueducto',desc:'Servicio de agua',prio:1},
+    {id:'P-003',name:'Teléfono e Internet',desc:'Internet y teléfono fijo de la casa',prio:2},
+    {id:'P-004',name:'Farmacia Central',desc:'Medicinas del mes, a crédito',prio:1},
+    {id:'P-005',name:'Colmado Don Pepe',desc:'Lo fiao del mes',prio:2},
+    {id:'P-006',name:'Don José (jardinero)',desc:'Jardín, dos veces al mes',prio:3}];
+  const inv=(prov,num,day,mo,amount,pays,prio)=>{const p=providers.find(x=>x.id===prov);return{id:'I'+Math.random().toString(36).slice(2,9),prov,num,entered:d(day,mo),amount,prio:prio||p.prio,photo:fakePhoto(p.name,num,amount,d(day,mo)),payments:pays.map(([pd,pm,a])=>({date:d(pd,pm),amount:a}))}};
+  return{providers,invoices:[
+    inv('P-001','E-0093381',3,0,4850,[]),
+    inv('P-004','FC-2211',5,0,7320.5,[[10,0,3000]]),
+    inv('P-002','W-55120',4,0,1260,[]),
+    inv('P-003','PI-118842',2,0,2995,[]),
+    inv('P-005','CDP-0412',6,0,5480,[[10,0,2000]]),
+    inv('P-006','JOSE-11',1,0,3000,[[8,0,1500]]),
+    inv('P-001','E-0091204',3,-1,4620,[[9,-1,4620]]),
+    inv('P-002','W-54410',4,-1,1260,[[9,-1,1260]]),
+    inv('P-004','FC-2140',5,-1,6900,[[12,-1,4000],[26,-1,2900]])],moves:seedMoves()};
+}
+function seedMoves(){
+  const now=new Date(),out=[];let x=11;const rnd=()=>(x=(x*9301+49297)%233280)/233280;
+  const mv=(type,cat,amount,date,note='')=>out.push({id:'M'+Math.random().toString(36).slice(2,9),type,cat,amount,date,note});
+  for(const mo of [-1,0]){
+    const last=mo<0?new Date(now.getFullYear(),now.getMonth(),0).getDate():now.getDate();
+    const D=d=>ymd(new Date(now.getFullYear(),now.getMonth()+mo,d));
+    for(let d=1;d<=last;d++){const dt=new Date(now.getFullYear(),now.getMonth()+mo,d);if(dt.getDay()===0)continue;mv('in','Venta del día',Math.round(7500+rnd()*9000),D(d))}
+    [[1,'out','Alquiler',15000,'Local'],[8,'out','Luz',3900,''],[12,'out','Mercancía',22400,'Pedido al distribuidor'],[15,'out','Salarios',18000,'Quincena'],[20,'out','Impuestos',6250,'ITBIS'],[24,'in','Otro ingreso',2500,'Encargo especial'],[30,'out','Salarios',18000,'Quincena']]
+      .forEach(([d,t,c,a,n])=>{if(d<=last)mv(t,c,a,D(d),n)});
+  }
+  return out;
+}
+
+let S=null;
+try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+if(!S||!S.providers)S=seed();
+if(!S.moves)S.moves=seedMoves();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('No se pudo guardar en este equipo — el espacio está lleno o bloqueado')}}
+
+const paidOf=i=>r2(i.payments.reduce((a,p)=>a+(+p.amount||0),0));
+const bal=i=>r2(i.amount-paidOf(i));
+const isPaid=i=>bal(i)<=0;
+const paidDate=i=>isPaid(i)&&i.payments.length?i.payments.map(p=>p.date).sort().pop():null;
+const prov=id=>S.providers.find(p=>p.id===id)||{name:'(suplidor borrado)',desc:''};
+
+let tab='topay',openId=null,openMove=null;
+const curYM=()=>today().slice(0,7);
+let M=curYM();
+const inM=d=>M==='all'||(d||'').startsWith(M);
+const mName=ym=>new Date(ym+'-15T12:00').toLocaleDateString('es-DO',{month:'long',year:'numeric'});
+const CATS={in:['Venta del día','Otro ingreso'],out:['Impuestos','Luz','Agua','Salarios','Alquiler','Mercancía','Otro gasto']};
+let toastT;
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),2200)}
+
+function render(){
+  $('#month').textContent='Hoy: '+fmtDate(today());
+  const per=M==='all'?'en total':'en '+mName(M).split(' ')[0];
+  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===tab));
+  $('#fab').textContent=tab==='prov'?'+ Suplidor':tab==='caja'?'+ Movimiento':'+ Factura';
+  $('#mbar').style.display=tab==='prov'?'none':'';
+  $('#mlab').textContent=M==='all'?'Todos los meses':mName(M);
+  $('#mbar .all').setAttribute('aria-pressed',M==='all');
+  const R=$('#readout'),L=$('#list');
+  if(tab==='caja'){
+    const xs=S.moves.filter(m=>inM(m.date)).sort((a,b)=>b.date.localeCompare(a.date)||(a.type>b.type?1:-1));
+    const tin=xs.filter(m=>m.type==='in').reduce((a,m)=>a+m.amount,0),tout=xs.filter(m=>m.type==='out').reduce((a,m)=>a+m.amount,0);
+    R.innerHTML=`<div><div class="lab">Balance ${per}</div><div class="big">${tin-tout<0?'− ':''}${money(Math.abs(tin-tout))}</div></div>
+    <div class="split"><span>Entradas: <b style="color:#4cc38a">${money(tin)}</b></span><span>Salidas: <b style="color:#ff8a5c">${money(tout)}</b></span></div>`;
+    let last='',h='';
+    for(const m of xs){if(m.date!==last){const day=xs.filter(y=>y.date===m.date),net=day.reduce((a,y)=>a+(y.type==='in'?y.amount:-y.amount),0);
+      h+=`<div class="grp"><span>${new Date(m.date+'T12:00').toLocaleDateString('es-DO',{weekday:'long',day:'numeric',month:'short'})}</span><b>${net<0?'− ':''}${money(Math.abs(net))}</b></div>`;last=m.date}
+      h+=`<button class="card" data-act="editmove" data-id="${m.id}"><div class="ico ${m.type}">${m.type==='in'?'+':'−'}</div><div><h3>${esc(m.cat)}</h3><div class="sub">${esc(m.note)||(m.type==='in'?'Entrada':'Salida')}</div></div><div class="amt ${m.type}">${m.type==='in'?'+':'−'} ${money(m.amount)}</div></button>`}
+    L.innerHTML=h||'<div class="empty">No hay movimientos este mes.<br>Toque “+ Movimiento” para anotar la venta del día.</div>';
+    return;
+  }
+  const open=S.invoices.filter(i=>!isPaid(i)),openM=open.filter(i=>inM(i.entered));
+  const urg=openM.filter(i=>i.prio==1);
+  const pm=S.invoices.flatMap(i=>i.payments).filter(p=>inM(p.date)).reduce((a,p)=>a+(+p.amount||0),0);
+  R.innerHTML=`<div><div class="lab">Falta por pagar${M==='all'?'':' · facturas de '+mName(M).split(' ')[0]}</div><div class="big">${money(openM.reduce((a,i)=>a+bal(i),0))}</div></div>
+  <div class="side">Urgentes: <b>${urg.length+(urg.length==1?' factura':' facturas')}</b></div><div class="lab">Pagado ${per}: ${money(pm)}</div>`;
+  if(tab==='topay'){
+    const xs=openM.sort((a,b)=>a.prio-b.prio||a.entered.localeCompare(b.entered));
+    const older=M==='all'?0:open.filter(i=>i.entered.slice(0,7)<M).length;
+    L.innerHTML=(older?`<div class="notice"><span>Hay ${older} factura${older==1?'':'s'} pendiente${older==1?'':'s'} de meses anteriores.</span><button data-act="mall">Ver todas</button></div>`:'')+
+      (xs.length?xs.map((i,n)=>card(i,n+1)).join(''):'<div class="empty">No hay facturas pendientes de este mes. 🎉<br>Toque “+ Factura” para agregar una.</div>');
+  }else if(tab==='paid'){
+    const xs=S.invoices.filter(i=>isPaid(i)&&inM(paidDate(i))).sort((a,b)=>paidDate(b).localeCompare(paidDate(a)));
+    let last='',h='';
+    for(const i of xs){const m=mName(paidDate(i).slice(0,7));if(M==='all'&&m!==last){h+=`<div class="grp"><span>${m}</span></div>`;last=m}h+=card(i)}
+    L.innerHTML=h||'<div class="empty">No hay facturas saldadas en este mes.</div>';
+  }else{
+    L.innerHTML=S.providers.length?S.providers.map(p=>{const mine=S.invoices.filter(i=>i.prov===p.id&&!isPaid(i));const owe=mine.reduce((a,i)=>a+bal(i),0);
+      return`<button class="card" data-act="editprov" data-id="${p.id}"><div class="thumb" style="font-weight:700">${esc(p.id)}</div><div><h3>${esc(p.name)}</h3><div class="sub">${esc(p.desc)||'&nbsp;'}</div><span class="pill ${PR[p.prio][1]}">${PR[p.prio][0]}</span></div><div class="amt">${owe?money(owe):'—'}<small>${mine.length} pendiente${mine.length==1?'':'s'}</small></div></button>`}).join(''):'<div class="empty">Todavía no hay suplidores.</div>';
+  }
+}
+let draftType='in',draftCat='Venta del día';
+function editMove(id){
+  const m=S.moves.find(x=>x.id===id);openMove=m?m.id:null;
+  draftType=m?m.type:'in';draftCat=m?m.cat:CATS.in[0];
+  sheet(head(m?'Editar movimiento':'Nuevo movimiento','Caja del negocio')+`<form id="fMove">
+  <label>¿Qué está anotando?</label><div class="chips" id="mType"></div>
+  <label>Tipo</label><div class="chips" id="mCat"></div>
+  <div class="row"><div><label for="mAmt">Monto (RD$)</label><input id="mAmt" type="number" inputmode="decimal" step="0.01" min="0.01" required value="${m?m.amount:''}"></div>
+  <div><label for="mDate">Fecha</label><input id="mDate" type="date" required value="${m?m.date:today()}"></div></div>
+  <label for="mNote">Nota (opcional)</label><input id="mNote" value="${esc(m?.note)}" autocomplete="off" placeholder="Ej.: quincena, ITBIS, pedido…">
+  <button class="btn">Guardar</button></form>${m?'<button class="btn danger" data-act="delmove">Borrar movimiento</button>':''}`);
+  moveChips();
+}
+function moveChips(){
+  $('#mType').innerHTML=[['in','Entrada (ingreso)'],['out','Salida (pago)']].map(([k,l])=>`<button type="button" data-act="mtype" data-v="${k}" aria-pressed="${draftType===k}">${l}</button>`).join('');
+  $('#mCat').innerHTML=CATS[draftType].map(c=>`<button type="button" data-act="mcat" data-v="${esc(c)}" aria-pressed="${draftCat===c}">${esc(c)}</button>`).join('');
+}
+function card(i,rank){
+  const p=prov(i.prov),pd=paidOf(i),b=bal(i),pct=Math.min(100,pd/i.amount*100);
+  const st=isPaid(i)?'<span class="pill ok">Pagada '+fmtDate(paidDate(i))+'</span>':pd>0?'<span class="pill part">Abonada</span>':'';
+  return`<button class="card" data-act="open" data-id="${i.id}">${i.photo?`<img class="thumb" src="${i.photo}" alt="">`:'<div class="thumb">Sin foto</div>'}
+  <div><h3>${rank?rank+'. ':''}${esc(p.name)}</h3><div class="sub">#${esc(i.num)} · entró ${fmtDate(i.entered)}</div>${isPaid(i)?'':`<span class="pill ${PR[i.prio][1]}">${PR[i.prio][0]}</span>`}${st}</div>
+  <div class="amt">${money(isPaid(i)?i.amount:b)}<small>${isPaid(i)?'total':pd>0?'resta de '+money(i.amount):'a pagar'}</small></div>
+  ${pd>0&&!isPaid(i)?`<div class="bar"><i style="width:${pct}%"></i></div>`:''}</button>`;
+}
+
+function sheet(html){$('#sheet').innerHTML=html;$('#shade').classList.add('on');document.body.style.overflow='hidden'}
+function closeSheet(){$('#shade').classList.remove('on');document.body.style.overflow='';openId=null;openMove=null;render()}
+const head=(t,s)=>`<div class="top"><div><h2>${t}</h2>${s?`<div class="sub" style="color:var(--mut)">${s}</div>`:''}</div><button class="x" data-act="close" aria-label="Cerrar">×</button></div>`;
+const prioChips=(v,act)=>`<div class="chips">${[1,2,3].map(k=>`<button type="button" data-act="${act}" data-v="${k}" aria-pressed="${v==k}">${PR[k][0]}</button>`).join('')}</div>`;
+
+let draftPhoto=null,draftPrio=null;
+function newInvoice(){
+  if(!S.providers.length){toast('Primero agregue un suplidor');tab='prov';render();return}
+  draftPhoto=null;draftPrio=S.providers[0].prio;
+  sheet(head('Nueva factura')+`<form id="fInv">
+  <label>Foto de la factura</label><div class="snap" id="snap">📷 Tomar o elegir una foto<input type="file" accept="image/*" capture="environment" id="pic"></div>
+  <label for="iProv">Suplidor</label><select id="iProv" required>${S.providers.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>
+  <div class="row"><div><label for="iNum">Número de factura</label><input id="iNum" required autocomplete="off"></div>
+  <div><label for="iAmt">Monto (RD$)</label><input id="iAmt" type="number" inputmode="decimal" step="0.01" min="0.01" required></div></div>
+  <label for="iDate">Fecha de entrada</label><input id="iDate" type="date" value="${today()}" required>
+  <label>Prioridad</label><div id="iPrio">${prioChips(draftPrio,'dprio')}</div>
+  <button class="btn">Guardar factura</button></form>`);
+}
+function showInvoice(id){
+  const i=S.invoices.find(x=>x.id===id);if(!i)return closeSheet();openId=id;
+  const p=prov(i.prov),b=bal(i);
+  sheet(head(esc(p.name),'Factura #'+esc(i.num))+
+  (i.photo?`<img class="photo" src="${i.photo}" alt="Foto de la factura" data-act="view">`:`<div class="snap">📷 Agregar una foto<input type="file" accept="image/*" capture="environment" id="addpic"></div>`)+
+  `<div class="facts"><div><span>Monto</span><b>${money(i.amount)}</b></div><div><span>Se debe</span><b style="color:${b>0?'var(--red)':'var(--grn)'}">${money(Math.max(b,0))}</b></div>
+  <div><span>Entró</span><b>${fmtDate(i.entered)}</b></div><div><span>Saldada el</span><b>${fmtDate(paidDate(i))}</b></div></div>
+  ${b>0?`<label>Prioridad</label>${prioChips(i.prio,'prio')}
+  <form id="fPay"><div class="row"><div><label for="pAmt">Monto a pagar</label><input id="pAmt" type="number" inputmode="decimal" step="0.01" min="0.01" max="${b}" value="${b}" required></div>
+  <div><label for="pDate">Fecha de pago</label><input id="pDate" type="date" value="${today()}" required></div></div>
+  <div class="row"><button class="btn ghost" type="button" data-act="half">Pagar la mitad</button><button class="btn">Registrar pago</button></div></form>`:''}
+  <label>Pagos y abonos (${i.payments.length})</label>
+  ${i.payments.length?`<ul class="pays">${i.payments.map((x,k)=>`<li><span>${fmtDate(x.date)}</span><b>${money(x.amount)}</b><button data-act="delpay" data-k="${k}" aria-label="Quitar pago">×</button></li>`).join('')}</ul>`:'<div class="sub" style="color:var(--mut)">Todavía no hay pagos.</div>'}
+  <button class="btn danger" data-act="delinv">Borrar factura</button>`);
+}
+function editProv(id){
+  const p=S.providers.find(x=>x.id===id);
+  const nid=p?p.id:'P-'+pad3(Math.max(0,...S.providers.map(x=>+x.id.slice(2)||0))+1);
+  draftPrio=p?p.prio:2;
+  sheet(head(p?'Editar suplidor':'Nuevo suplidor','ID '+nid)+`<form id="fProv" data-id="${nid}" data-new="${p?'':'1'}">
+  <label for="vName">Nombre</label><input id="vName" required value="${esc(p?.name)}" autocomplete="off">
+  <label for="vDesc">Descripción</label><textarea id="vDesc">${esc(p?.desc)}</textarea>
+  <label>Prioridad usual</label><div id="vPrio">${prioChips(draftPrio,'dprio')}</div>
+  <button class="btn">Guardar suplidor</button></form>${p?'<button class="btn danger" data-act="delprov" data-id="'+p.id+'">Borrar suplidor</button>':''}`);
+}
+const pad3=n=>String(n).padStart(3,'0');
+
+function shrink(file){return new Promise((res,rej)=>{const u=URL.createObjectURL(file),im=new Image();
+  im.onload=()=>{const r=Math.min(1,1100/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*r);c.height=Math.round(im.height*r);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);res(c.toDataURL('image/jpeg',.72))};
+  im.onerror=()=>{URL.revokeObjectURL(u);rej()};im.src=u})}
+
+function armed(btn,label){if(btn.dataset.armed){return true}btn.dataset.armed=1;btn.textContent=label;setTimeout(()=>{if(btn.isConnected){delete btn.dataset.armed;btn.textContent=btn.dataset.act==='delinv'?'Borrar factura':btn.dataset.act==='delmove'?'Borrar movimiento':btn.dataset.act==='reset'?'Reiniciar demo':'Borrar suplidor'}},3000);return false}
+
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-tab],[data-act]');if(!t)return;
+  if(t.dataset.tab){tab=t.dataset.tab;render();return}
+  const a=t.dataset.act,i=S.invoices.find(x=>x.id===openId);
+  if(a==='fab')tab==='prov'?editProv(null):tab==='caja'?editMove(null):newInvoice();
+  else if(a==='mprev'||a==='mnext'){const [y,m]=(M==='all'?curYM():M).split('-').map(Number);M=ymd(new Date(y,m-1+(a==='mnext'?1:-1),1)).slice(0,7);render()}
+  else if(a==='mall'){M=M==='all'?curYM():'all';render()}
+  else if(a==='editmove')editMove(t.dataset.id);
+  else if(a==='mtype'){draftType=t.dataset.v;if(!CATS[draftType].includes(draftCat))draftCat=CATS[draftType][0];moveChips()}
+  else if(a==='mcat'){draftCat=t.dataset.v;moveChips()}
+  else if(a==='delmove'){if(armed(t,'Toque otra vez para borrar')){S.moves=S.moves.filter(x=>x.id!==openMove);save();closeSheet();toast('Movimiento borrado')}}
+  else if(a==='open')showInvoice(t.dataset.id);
+  else if(a==='editprov')editProv(t.dataset.id);
+  else if(a==='close')closeSheet();
+  else if(a==='view'){$('#viewImg').src=t.src;$('#viewer').classList.add('on')}
+  else if(a==='closeview')$('#viewer').classList.remove('on');
+  else if(a==='dprio'){draftPrio=+t.dataset.v;t.parentNode.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b===t))}
+  else if(a==='prio'&&i){i.prio=+t.dataset.v;save();showInvoice(i.id);toast('Prioridad: '+PR[i.prio][0])}
+  else if(a==='half'&&i){$('#pAmt').value=r2(bal(i)/2)}
+  else if(a==='delpay'&&i){i.payments.splice(+t.dataset.k,1);save();showInvoice(i.id);toast('Pago quitado')}
+  else if(a==='delinv'&&i){if(armed(t,'Toque otra vez para borrar')){S.invoices=S.invoices.filter(x=>x!==i);save();closeSheet();toast('Factura borrada')}}
+  else if(a==='delprov'){const id=t.dataset.id;if(S.invoices.some(x=>x.prov===id)){toast('Este suplidor todavía tiene facturas');return}
+    if(armed(t,'Toque otra vez para borrar')){S.providers=S.providers.filter(x=>x.id!==id);save();closeSheet();toast('Suplidor borrado')}}
+  else if(a==='reset'){if(armed(t,'Toque otra vez para reiniciar')){S=seed();save();tab='topay';M=curYM();render();toast('Datos de ejemplo restaurados')}}
+});
+$('#shade').addEventListener('click',e=>{if(e.target.id==='shade')closeSheet()});
+$('#viewer').addEventListener('click',e=>{if(e.target.id==='viewer')$('#viewer').classList.remove('on')});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('#viewer').classList.contains('on')?$('#viewer').classList.remove('on'):$('#shade').classList.contains('on')&&closeSheet()}});
+
+document.addEventListener('change',async e=>{
+  if(e.target.id==='iProv'){const p=prov(e.target.value);draftPrio=p.prio||2;$('#iPrio').innerHTML=prioChips(draftPrio,'dprio')}
+  if((e.target.id==='pic'||e.target.id==='addpic')&&e.target.files[0]){
+    try{const url=await shrink(e.target.files[0]);
+      if(e.target.id==='pic'){draftPhoto=url;const s=$('#snap');s.innerHTML=`<img src="${url}" alt="Foto de la factura">`;const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.id='pic';s.appendChild(inp)}
+      else{const i=S.invoices.find(x=>x.id===openId);if(i){i.photo=url;save();showInvoice(i.id);toast('Foto agregada')}}
+    }catch(err){toast('No se pudo leer esa foto')}}
+});
+
+document.addEventListener('submit',e=>{
+  e.preventDefault();const f=e.target;
+  if(f.id==='fInv'){
+    const amount=r2(+$('#iAmt').value);if(!(amount>0))return toast('Escriba un monto');
+    S.invoices.push({id:'I'+Date.now().toString(36),prov:$('#iProv').value,num:$('#iNum').value.trim(),entered:$('#iDate').value,amount,prio:draftPrio||2,photo:draftPhoto,payments:[]});
+    save();tab='topay';if(!inM($('#iDate').value))M=$('#iDate').value.slice(0,7);closeSheet();toast('Factura guardada');
+  }else if(f.id==='fPay'){
+    const i=S.invoices.find(x=>x.id===openId);if(!i)return;
+    const amt=r2(+$('#pAmt').value),b=bal(i);
+    if(!(amt>0))return toast('Escriba un monto');
+    if(amt>b)return toast('Eso es más de lo que se debe ('+money(b)+')');
+    i.payments.push({date:$('#pDate').value||today(),amount:amt});save();
+    toast(amt>=b?'¡Saldada! ✓':'Abono guardado — faltan '+money(r2(b-amt)));
+    showInvoice(i.id);
+  }else if(f.id==='fMove'){
+    const amount=r2(+$('#mAmt').value);if(!(amount>0))return toast('Escriba un monto');
+    const data={type:draftType,cat:draftCat,amount,date:$('#mDate').value||today(),note:$('#mNote').value.trim()};
+    const ex=S.moves.find(x=>x.id===openMove);
+    ex?Object.assign(ex,data):S.moves.push({id:'M'+Date.now().toString(36),...data});
+    save();if(!inM(data.date))M=data.date.slice(0,7);closeSheet();toast(data.type==='in'?'Entrada guardada':'Salida guardada');
+  }else if(f.id==='fProv'){
+    const name=$('#vName').value.trim();if(!name)return;
+    const id=f.dataset.id,ex=S.providers.find(x=>x.id===id);
+    const data={id,name,desc:$('#vDesc').value.trim(),prio:draftPrio||2};
+    ex?Object.assign(ex,data):S.providers.push(data);save();closeSheet();toast('Suplidor guardado');
+  }
+});
+
+render();
+}
+</script>
+</body>
+</html>
